@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create and animate a 3D cube with Three.js</title>
+
+  <style>
+    
+  </style>
+
+  
+</head>
+<body>
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module" src=""></script>
+
+  <script>
+    import * as THREE from
+	'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js'
+
+//シーンを生成
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+
+//カメラを生成
+const camera = new THREE.PerspectiveCamera(
+	60,
+	window.innerWidth / window.innerHeight,
+	0.1,
+	5000
+);
+//３D描画を生成
+const renderer = new THREE.WebGLRenderer({
+	antialias: true
+});
+
+renderer.setSize(
+	window.innerWidth,
+	window.innerHeight
+);
+// HTMLに追加
+document.body.appendChild(renderer.domElement);
+
+/////////// 航空機の定義 start ///////////////////////////////
+
+// 胴体
+const fuselage_geometry = new THREE.CylinderGeometry(
+	0.5,
+	0.5,
+	6,
+	16
+);
+const fuselage_material = new THREE.MeshBasicMaterial({
+	color: 0xffffff
+});
+const fuselage = new THREE.Mesh(fuselage_geometry,fuselage_material);
+fuselage.rotation.x = Math.PI / 2;
+fuselage.position.set(0, 0, 0);
+
+// 主翼
+const mainwing_geometry = new THREE.BoxGeometry(10, 0.2, 1.5);
+const mainwing_material = new THREE.MeshBasicMaterial({
+	color : 0xffffff
+});
+const mainwing = new THREE.Mesh(mainwing_geometry, mainwing_material);
+mainwing.position.set(0, 0, 0);
+
+// 水平尾翼
+const horizontaltail_geometry = new THREE.BoxGeometry(4, 0.15, 1);
+const horizontaltail_material = new THREE.MeshBasicMaterial({
+	color : 0xffffff
+});
+const horizontaltail = new THREE.Mesh(horizontaltail_geometry, horizontaltail_material);
+horizontaltail.position.set(0, 0, 2.5);
+
+// 垂直尾翼
+const verticaltail_geometry = new THREE.BoxGeometry(0.15, 1.5, 1.2);
+const verticaltail_material = new THREE.MeshBasicMaterial({
+	color : 0xffffff
+});
+const verticaltail = new THREE.Mesh(verticaltail_geometry, verticaltail_material);
+verticaltail.position.set(0, 0.75, 2.5);
+
+// 航空機のパーツをグループ化
+const aircraft = new THREE.Group();
+aircraft.position.set(0, 2, 0);
+aircraft.add(fuselage);
+aircraft.add(mainwing);
+aircraft.add(horizontaltail);
+aircraft.add(verticaltail);
+
+// 航空機初期値
+const rotationSpeed = 30 * Math.PI / 180;
+const flightSpeed = 5;
+
+/////////// 航空機の定義 end ///////////////////////////////
+
+/////////// ワールドの定義 start ///////////////////////////////
+
+// 地面を描画
+const geometry = new THREE.PlaneGeometry(100,100);
+const material_ground = new THREE.MeshBasicMaterial({
+	color: 0x228B22
+});
+const ground = new THREE.Mesh(geometry, material_ground);
+ground.rotation.x = -Math.PI / 2;
+
+// 滑走路を描画
+const runway_geometry = new THREE.PlaneGeometry(10,80);
+const material_runway = new THREE.MeshBasicMaterial({
+	color: 0x444444
+});
+const runway_ground = new THREE.Mesh(runway_geometry, material_runway);
+runway_ground.position.y = 0.01;
+runway_ground.rotation.x = -Math.PI / 2;
+
+// センターラインの描画
+const linegeometry = new THREE.PlaneGeometry(0.3, 5);
+const material_line = new THREE.MeshBasicMaterial({
+		color: 0xffffff
+	});
+for(let i=0; i<8; i++){
+	const lineground = new THREE.Mesh(linegeometry, material_line);
+	const z = -35 + i*10;
+	lineground.position.set(0, 0.02, z);
+	lineground.rotation.x = -Math.PI / 2;
+	scene.add(lineground);
+}
+/////////// ワールドの定義 end ///////////////////////////////
+
+// 時間取得
+const clock = new THREE.Clock();
+
+// シーンに追加
+scene.add(ground);
+scene.add(runway_ground);
+scene.add(aircraft);
+
+// キーボードイベントステータス初期化
+let forwardPressed = false;
+let backwardPressed = false;
+let pitchUpPressed = false;
+let pitchDownPressed = false;
+let rollLeftPressed = false;
+let rollRightPressed = false;
+let yawLeftPressed = false;
+let yawRightPressed = false;
+
+
+////// カメラ位置の調整 //////////
+// カメラ位置オフセットの定義
+const offset = new THREE.Vector3(0, 5, 15);
+// カメラ追従速度
+const followSpeed = 6;
+
+// 回転後のカメラオフセット
+const rotatedOffset = new THREE.Vector3();
+// カメラの位置
+const targetPosition = new THREE.Vector3();
+
+// カメラ位置に航空機位置をコピーする
+camera.position.copy(aircraft.position);
+camera.position.add(offset);
+camera.lookAt(aircraft.position);
+
+// アニメーション開始
+animate();
+console.log(camera);
+
+// アニメーションループ
+function animate(){
+	// 次のフレームを予約
+	requestAnimationFrame(animate);
+	const deltaTime = clock.getDelta();
+
+	// キーイベント判定
+	if(pitchUpPressed){
+		// aircraft.rotation.x += rotationSpeed * deltaTime;
+		aircraft.rotateX(rotationSpeed * deltaTime);
+	}
+	if(pitchDownPressed){
+		// aircraft.rotation.x -= rotationSpeed * deltaTime;
+		aircraft.rotateX(-rotationSpeed * deltaTime);
+	}
+	if(rollLeftPressed){
+		// aircraft.rotation.z += rotationSpeed * deltaTime;
+		aircraft.rotateZ(rotationSpeed * deltaTime);
+	}
+	if(rollRightPressed){
+		// aircraft.rotation.z -= rotationSpeed * deltaTime;
+		aircraft.rotateZ(-rotationSpeed * deltaTime);
+	}
+	if(yawLeftPressed){
+		// aircraft.rotation.y += rotationSpeed * deltaTime;
+		aircraft.rotateY(rotationSpeed * deltaTime);
+	}
+	if(yawRightPressed){
+		// aircraft.rotation.y -= rotationSpeed * deltaTime;
+		aircraft.rotateY(-rotationSpeed * deltaTime);
+	}
+
+	// 航空機前進
+	aircraft.translateZ(-flightSpeed * deltaTime);
+
+	// オフセットのコピー
+	rotatedOffset.copy(offset);
+	// コピーしたオフセットに航空機の回転姿勢を適用する
+	rotatedOffset.applyQuaternion(aircraft.quaternion);
+
+	// カメラ位置調整
+	targetPosition.copy(aircraft.position);
+	targetPosition.add(rotatedOffset);
+	// 補完率の計算
+	const alpha = 1 - Math.exp(-followSpeed * deltaTime);
+	camera.position.lerp(targetPosition, alpha);
+
+	// カメラの上方向の初期化
+	camera.up.set(0, 1, 0);
+	// 航空機の回転姿勢を適用
+	camera.up.applyQuaternion(aircraft.quaternion);
+
+	camera.lookAt(aircraft.position);
+
+	// レンダー実行
+	renderer.render(scene, camera);
+
+};
+
+// イベント発火
+window.addEventListener('keydown', function(event){
+	if(event.key === 'i' || event.key === 'I'){
+		pitchUpPressed = true;
+	}
+	if(event.key === 'k' || event.key === 'K'){
+		pitchDownPressed = true;
+	}
+	if(event.key === 'j' || event.key === 'J'){
+		rollLeftPressed = true;
+	}
+	if(event.key === 'l' || event.key === 'L'){
+		rollRightPressed = true;
+	}
+	if(event.key === 'u' || event.key === 'U'){
+		yawLeftPressed = true;
+	}
+	if(event.key === 'o' || event.key === 'O'){
+		yawRightPressed = true;
+	}
+
+
+});
+
+window.addEventListener('keyup', function(event){
+	if(event.key === 'i' || event.key === 'I'){
+		pitchUpPressed = false;
+	}
+	if(event.key === 'k' || event.key === 'K'){
+		pitchDownPressed = false;
+	}
+	if(event.key === 'j' || event.key === 'J'){
+		rollLeftPressed = false;
+	}
+	if(event.key === 'l' || event.key === 'L'){
+		rollRightPressed = false;
+	}
+	if(event.key === 'u' || event.key === 'U'){
+		yawLeftPressed = false;
+	}
+	if(event.key === 'o' || event.key === 'O'){
+		yawRightPressed = false;
+	}
+
+});
+  </script>
+</body>
+</html>
